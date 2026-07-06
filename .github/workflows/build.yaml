@@ -21,3 +21,17 @@ jobs:
 
       - name: Publish
         run: dotnet publish -c Release -o publish
+
+      - name: Stop Product Application Pool
+        run: |
+          Import-Module WebAdministration
+          Stop-WebAppPool -Name "ProductPool"
+
+      - name: Copy Published Files
+        run: |
+          Copy-Item -Path "publish\*" -Destination "C:\inetpub\ProductService" -Recurse -Force
+
+      - name: Start Product Application Pool
+        run: |
+          Import-Module WebAdministration
+          Start-WebAppPool -Name "ProductPool"
