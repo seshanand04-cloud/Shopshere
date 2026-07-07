@@ -4,36 +4,56 @@ on:
   push:
     branches:
       - development
+      - main
 
 jobs:
   build:
     runs-on: self-hosted
 
     steps:
-      - name: Checkout Source
-        uses: actions/checkout@v4
 
-      - name: Restore
-        run: dotnet restore
-
-      - name: Build
-        run: dotnet build --configuration Release
-
-      - name: Publish
-        run: dotnet publish -c Release -o publish
-
-      - name: Stop IIS App
+      - name: Set Environment
         shell: powershell
         run: |
-          Stop-Website "ProductService"
-          Stop-WebAppPool "ProductPool"
+          if ("${{ github.ref_name }}" -eq "development") {
+            echo "SITE=ProductService-Dev" >> $env:GITHUB_ENV
+            echo "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
+          }
+          else {
+            echo "SITE=ProductService-Prod" >> $env:GITHUB_ENV
+            echo "POOL=ProductPool-Prod" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
+          }
+
+      - name: Debug Environment
+        shell: powershell
+        run: |
+          $env:PATH
+          Get-Command git -ErrorAction SilentlyContinue
+          Test-Path "C:\Program Files\Git\cmd\git.exe"
+
+      - name: Build Latest Code
+        shell: powershell
+        run: |
+          cd C:\Builder\Shopshere
+          git fetch
+          git checkout ${{ github.ref_name }}
+          git pull
+
+          dotnet restore
+          dotnet build --configuration Release
+          dotnet publish -c Release -o publish
 
       - name: Deploy
         shell: powershell
-        run: Copy-Item "publish\*" "C:\inetpub\ProductService" -Recurse -Force
-
-      - name: Start IIS App
-        shell: powershell
         run: |
-          Start-WebAppPool "ProductPool"
-          Start-Website "ProductService"
+          Import-Module WebAdministration
+
+          Stop-Website $env:SITE
+          Stop-WebAppPool $env:POOL
+
+          Copy-Item "C:\Builder\Shopshere\publish\*" $env:DEPLOY_PATH -Recurse -Force
+
+          Start-WebAppPool $env:POOL
+          Start-Website $env:SITE
