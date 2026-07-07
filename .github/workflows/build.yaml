@@ -38,6 +38,12 @@ jobs:
           dotnet build --configuration Release
           dotnet publish -c Release -o publish
 
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ProductService
+          path: C:\Builder\Shopshere\publish
+
       - name: Deploy
         shell: powershell
         run: |
