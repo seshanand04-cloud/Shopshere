@@ -22,16 +22,18 @@ jobs:
       - name: Publish
         run: dotnet publish -c Release -o publish
 
-      - name: Stop IIS
-        shell: powershell
-        run: iisreset /stop
-
-      - name: Copy Published Files
+      - name: Stop IIS App
         shell: powershell
         run: |
-          Write-Host "Copying published files..."
-          Copy-Item -Path "publish\*" -Destination "C:\inetpub\ProductService" -Recurse -Force
+          Stop-Website "ProductService"
+          Stop-WebAppPool "ProductPool"
 
-      - name: Start IIS
+      - name: Deploy
         shell: powershell
-        run: iisreset /start
+        run: Copy-Item "publish\*" "C:\inetpub\ProductService" -Recurse -Force
+
+      - name: Start IIS App
+        shell: powershell
+        run: |
+          Start-WebAppPool "ProductPool"
+          Start-Website "ProductService"
