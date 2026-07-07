@@ -4,14 +4,47 @@ on:
   push:
     branches:
       - development
+      - qa
+      - uat
+      - main
 
 jobs:
   build:
     runs-on: self-hosted
 
     steps:
+
       - name: Checkout Source
         uses: actions/checkout@v4
+
+      - name: Set Deployment Variables
+        shell: powershell
+        run: |
+          $branch="${{ github.ref_name }}"
+
+          if ($branch -eq "development") {
+            echo "SITE=ProductService-Dev" >> $env:GITHUB_ENV
+            echo "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
+            echo "DEPLY_PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
+          }
+
+          elseif ($branch -eq "qa") {
+            echo "SITE=ProductService-QA" >> $env:GITHUB_ENV
+            echo "POOL=ProductPool-QA" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-QA" >> $env:GITHUB_ENV
+          }
+
+          elseif ($branch -eq "uat") {
+            echo "SITE=ProductService-UAT" >> $env:GITHUB_ENV
+            echo "POOL=ProductPool-UAT" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-UAT" >> $env:GITHUB_ENV
+          }
+
+          elseif ($branch -eq "main") {
+            echo "SITE=ProductService-Prod" >> $env:GITHUB_ENV
+            echo "POOL=ProductPool-Prod" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
+          }
 
       - name: Restore
         run: dotnet restore
@@ -22,18 +55,30 @@ jobs:
       - name: Publish
         run: dotnet publish -c Release -o publish
 
-      - name: Stop IIS App
+      - name: Stop Website
         shell: powershell
         run: |
-          Stop-Website "ProductService"
-          Stop-WebAppPool "ProductPool"
+          Import-Module WebAdministration
+          Stop-Website "${{ env.SITE }}"
 
-      - name: Deploy
-        shell: powershell
-        run: Copy-Item "publish\*" "C:\inetpub\ProductService" -Recurse -Force
-
-      - name: Start IIS App
+      - name: Stop Pool
         shell: powershell
         run: |
-          Start-WebAppPool "ProductPool"
-          Start-Website "ProductService"
+          Import-Module WebAdministration
+          Stop-WebAppPool "${{ env.POOL }}"
+
+      - name: Copy Files
+        shell: powershell
+        run: Copy-Item "publish\*" "${{ env.DEPLOY_PATH }}" -Recurse -Force
+
+      - name: Start Pool
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+          Start-WebAppPool "${{ env.POOL }}"
+
+      - name: Start Website
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+          Start-Website "${{ env.SITE }}"
