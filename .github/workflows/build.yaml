@@ -26,6 +26,13 @@ jobs:
             echo "PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
           }
 
+      - name: Debug Environment
+        shell: powershell
+        run: |
+          $env:PATH
+          Get-Command git -ErrorAction SilentlyContinue
+          Test-Path "C:\Program Files\Git\cmd\git.exe"
+
       - name: Build Latest Code
         shell: powershell
         run: |
