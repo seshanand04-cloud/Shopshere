@@ -22,18 +22,9 @@ jobs:
       - name: Publish
         run: dotnet publish -c Release -o publish
 
-      - name: Stop Product Application Pool
+      - name: Stop IIS
         shell: powershell
-        run: |
-          Import-Module WebAdministration
-
-          if ((Get-WebAppPoolState -Name "ProductPool").Value -eq "Started") {
-              Write-Host "Stopping ProductPool..."
-              Stop-WebAppPool -Name "ProductPool"
-          }
-          else {
-              Write-Host "ProductPool is already stopped."
-          }
+        run: iisreset /stop
 
       - name: Copy Published Files
         shell: powershell
@@ -41,15 +32,6 @@ jobs:
           Write-Host "Copying published files..."
           Copy-Item -Path "publish\*" -Destination "C:\inetpub\ProductService" -Recurse -Force
 
-      - name: Start Product Application Pool
+      - name: Start IIS
         shell: powershell
-        run: |
-          Import-Module WebAdministration
-
-          if ((Get-WebAppPoolState -Name "ProductPool").Value -ne "Started") {
-              Write-Host "Starting ProductPool..."
-              Start-WebAppPool -Name "ProductPool"
-          }
-          else {
-              Write-Host "ProductPool is already running."
-          }
+        run: iisreset /start
