@@ -18,12 +18,12 @@ jobs:
           if ("${{ github.ref_name }}" -eq "development") {
             echo "SITE=ProductService-Dev" >> $env:GITHUB_ENV
             echo "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
-            echo "PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
           }
           else {
             echo "SITE=ProductService-Prod" >> $env:GITHUB_ENV
             echo "POOL=ProductPool-Prod" >> $env:GITHUB_ENV
-            echo "PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
           }
 
       - name: Debug Environment
@@ -53,7 +53,7 @@ jobs:
           Stop-Website $env:SITE
           Stop-WebAppPool $env:POOL
 
-          Copy-Item "C:\Builder\Shopshere\publish\*" $env:PATH -Recurse -Force
+          Copy-Item "C:\Builder\Shopshere\publish\*" $env:DEPLOY_PATH -Recurse -Force
 
           Start-WebAppPool $env:POOL
           Start-Website $env:SITE
