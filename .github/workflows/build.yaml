@@ -52,7 +52,7 @@ jobs:
           Stop-Website $env:SITE
           Stop-WebAppPool $env:POOL
 
-          Copy-Item "C:\Builder\Artifacts\ProductService\*" $env:DEPLOY_PATH
+          Copy-Item "C:\Builder\Shopshere\publish\*" $env:DEPLOY_PATH -Recurse -Force
 
           Start-WebAppPool $env:POOL
           Start-Website $env:SITE
