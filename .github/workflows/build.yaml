@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - development
-      - qa
-      - uat
       - main
 
 jobs:
@@ -14,71 +12,41 @@ jobs:
 
     steps:
 
-      - name: Checkout Source
-        uses: actions/checkout@v4
-
-      - name: Set Deployment Variables
+      - name: Set Environment
         shell: powershell
         run: |
-          $branch="${{ github.ref_name }}"
-
-          if ($branch -eq "development") {
+          if ("${{ github.ref_name }}" -eq "development") {
             echo "SITE=ProductService-Dev" >> $env:GITHUB_ENV
             echo "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
-            echo "DEPLOY_PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
+            echo "PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
           }
-
-          elseif ($branch -eq "qa") {
-            echo "SITE=ProductService-QA" >> $env:GITHUB_ENV
-            echo "POOL=ProductPool-QA" >> $env:GITHUB_ENV
-            echo "DEPLOY_PATH=C:\inetpub\ProductService-QA" >> $env:GITHUB_ENV
-          }
-
-          elseif ($branch -eq "uat") {
-            echo "SITE=ProductService-UAT" >> $env:GITHUB_ENV
-            echo "POOL=ProductPool-UAT" >> $env:GITHUB_ENV
-            echo "DEPLOY_PATH=C:\inetpub\ProductService-UAT" >> $env:GITHUB_ENV
-          }
-
-          elseif ($branch -eq "main") {
+          else {
             echo "SITE=ProductService-Prod" >> $env:GITHUB_ENV
             echo "POOL=ProductPool-Prod" >> $env:GITHUB_ENV
-            echo "DEPLOY_PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
+            echo "PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
           }
 
-      - name: Restore
-        run: dotnet restore
+      - name: Build Latest Code
+        shell: powershell
+        run: |
+          cd C:\Builder\Shopshere
+          git fetch
+          git checkout ${{ github.ref_name }}
+          git pull
 
-      - name: Build
-        run: dotnet build --configuration Release
+          dotnet restore
+          dotnet build --configuration Release
+          dotnet publish -c Release -o publish
 
-      - name: Publish
-        run: dotnet publish -c Release -o publish
-
-      - name: Stop Website
+      - name: Deploy
         shell: powershell
         run: |
           Import-Module WebAdministration
-          Stop-Website "${{ env.SITE }}"
 
-      - name: Stop Pool
-        shell: powershell
-        run: |
-          Import-Module WebAdministration
-          Stop-WebAppPool "${{ env.POOL }}"
+          Stop-Website $env:SITE
+          Stop-WebAppPool $env:POOL
 
-      - name: Copy Files
-        shell: powershell
-        run: Copy-Item "publish\*" "${{ env.DEPLOY_PATH }}" -Recurse -Force
+          Copy-Item "C:\Builder\Shopshere\publish\*" $env:PATH -Recurse -Force
 
-      - name: Start Pool
-        shell: powershell
-        run: |
-          Import-Module WebAdministration
-          Start-WebAppPool "${{ env.POOL }}"
-
-      - name: Start Website
-        shell: powershell
-        run: |
-          Import-Module WebAdministration
-          Start-Website "${{ env.SITE }}"
+          Start-WebAppPool $env:POOL
+          Start-Website $env:SITE
