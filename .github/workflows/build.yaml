@@ -25,7 +25,7 @@ jobs:
           if ($branch -eq "development") {
             echo "SITE=ProductService-Dev" >> $env:GITHUB_ENV
             echo "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
-            echo "DEPLY_PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
+            echo "DEPLOY_PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
           }
 
           elseif ($branch -eq "qa") {
