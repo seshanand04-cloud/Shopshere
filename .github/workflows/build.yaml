@@ -48,30 +48,11 @@ jobs:
           name: ProductService
           path: C:\Builder\Artifacts\ProductService
 
-      - name: Save Release Artifact
-        shell: powershell
-        run: |
-
-          Remove-Item `
-          "C:\Builder\Release\ProductService" `
-          -Recurse -Force `
-          -ErrorAction Ignore
-
-          New-Item `
-          -ItemType Directory `
-          -Path "C:\Builder\Release\ProductService" `
-          -Force
-
-          Copy-Item `
-          "C:\Builder\Shopshere\publish\*" `
-          "C:\Builder\Release\ProductService" `
-          -Recurse -Force
-
-      - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
         with:
           name: ProductService
-          path: C:\Builder\Release\ProductService
+          path: C:\Builder\Temp\ProductService
 
       - name: Deploy Development
         shell: powershell
@@ -87,7 +68,7 @@ jobs:
           -ErrorAction Ignore
 
           Copy-Item `
-          "C:\Builder\Release\ProductService\*" `
+          "C:\Builder\Shopshere\publish\*" `
           "C:\inetpub\ProductService-Dev" `
           -Recurse -Force
 
@@ -117,7 +98,7 @@ jobs:
           -ErrorAction Ignore
 
           Copy-Item `
-          "C:\Builder\Release\ProductService\*" `
+          "C:\Builder\Shopshere\publish\*" `
           "C:\inetpub\ProductService-Prod" `
           -Recurse -Force
 
