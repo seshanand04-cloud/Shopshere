@@ -39,13 +39,13 @@ jobs:
           $version = Get-Date -Format "yyyyMMdd-HHmmss"
 
           Remove-Item "C:\Builder\Artifacts\ProductService\*" `
-          -Recurse -Force `
-          -ErrorAction Ignore
+            -Recurse -Force `
+            -ErrorAction Ignore
 
           Compress-Archive `
-              -Path publish\* `
-              -DestinationPath "C:\Builder\Artifacts\ProductService\ProductService-$version.zip"
-      
+            -Path publish\* `
+            -DestinationPath "C:\Builder\Artifacts\ProductService\ProductService-$version.zip"
+
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
@@ -64,17 +64,27 @@ jobs:
 
           Import-Module WebAdministration
 
+          Remove-Item `
+            "C:\Builder\Temp\ProductService\Extracted" `
+            -Recurse -Force `
+            -ErrorAction Ignore
+
+          Expand-Archive `
+            "C:\Builder\Temp\ProductService\ProductService-*.zip" `
+            "C:\Builder\Temp\ProductService\Extracted" `
+            -Force
+
           Stop-WebAppPool ProductPool-Dev -ErrorAction Ignore
 
           Remove-Item `
-          "C:\inetpub\ProductService-Dev\*" `
-          -Recurse -Force `
-          -ErrorAction Ignore
+            "C:\inetpub\ProductService-Dev\*" `
+            -Recurse -Force `
+            -ErrorAction Ignore
 
           Copy-Item `
-          "C:\Builder\Shopshere\publish\*" `
-          "C:\inetpub\ProductService-Dev" `
-          -Recurse -Force
+            "C:\Builder\Temp\ProductService\Extracted\*" `
+            "C:\inetpub\ProductService-Dev" `
+            -Recurse -Force
 
           Start-WebAppPool ProductPool-Dev
 
@@ -88,22 +98,38 @@ jobs:
 
     steps:
 
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ProductService
+          path: C:\Builder\Temp\ProductService
+
       - name: Deploy Production
         shell: powershell
         run: |
 
           Import-Module WebAdministration
 
+          Remove-Item `
+            "C:\Builder\Temp\ProductService\Extracted" `
+            -Recurse -Force `
+            -ErrorAction Ignore
+
+          Expand-Archive `
+            "C:\Builder\Temp\ProductService\ProductService-*.zip" `
+            "C:\Builder\Temp\ProductService\Extracted" `
+            -Force
+
           Stop-WebAppPool ProductPool-Prod -ErrorAction Ignore
 
           Remove-Item `
-          "C:\inetpub\ProductService-Prod\*" `
-          -Recurse -Force `
-          -ErrorAction Ignore
+            "C:\inetpub\ProductService-Prod\*" `
+            -Recurse -Force `
+            -ErrorAction Ignore
 
           Copy-Item `
-          "C:\Builder\Shopshere\publish\*" `
-          "C:\inetpub\ProductService-Prod" `
-          -Recurse -Force
+            "C:\Builder\Temp\ProductService\Extracted\*" `
+            "C:\inetpub\ProductService-Prod" `
+            -Recurse -Force
 
           Start-WebAppPool ProductPool-Prod
