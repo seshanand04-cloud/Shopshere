@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  development:
+  build-dev:
 
     if: github.ref_name == 'development'
 
@@ -36,14 +36,24 @@ jobs:
 
           dotnet publish -c Release -o publish
 
-          $version = Get-Date -Format "yyyyMMdd-HHmmss"
+      - name: Create Versioned Artifact
+        shell: powershell
+        run: |
 
-          Remove-Item "C:\Builder\Artifacts\ProductService\*" `
-            -Recurse -Force `
+          New-Item `
+            -ItemType Directory `
+            -Force `
+            -Path C:\Builder\Artifacts\ProductService | Out-Null
+
+          Remove-Item `
+            C:\Builder\Artifacts\ProductService\* `
+            -Force `
             -ErrorAction Ignore
 
+          $version = Get-Date -Format "yyyyMMdd-HHmmss"
+
           Compress-Archive `
-            -Path publish\* `
+            -Path C:\Builder\Shopshere\publish\* `
             -DestinationPath "C:\Builder\Artifacts\ProductService\ProductService-$version.zip"
 
       - name: Upload Artifact
@@ -65,30 +75,35 @@ jobs:
           Import-Module WebAdministration
 
           Remove-Item `
-            "C:\Builder\Temp\ProductService\Extracted" `
+            C:\Builder\Temp\ProductService\Extracted `
             -Recurse -Force `
             -ErrorAction Ignore
 
+          $zip = Get-ChildItem `
+            C:\Builder\Temp\ProductService\*.zip |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
           Expand-Archive `
-            "C:\Builder\Temp\ProductService\ProductService-*.zip" `
-            "C:\Builder\Temp\ProductService\Extracted" `
+            $zip.FullName `
+            C:\Builder\Temp\ProductService\Extracted `
             -Force
 
           Stop-WebAppPool ProductPool-Dev -ErrorAction Ignore
 
           Remove-Item `
-            "C:\inetpub\ProductService-Dev\*" `
+            C:\inetpub\ProductService-Dev\* `
             -Recurse -Force `
             -ErrorAction Ignore
 
           Copy-Item `
-            "C:\Builder\Temp\ProductService\Extracted\*" `
-            "C:\inetpub\ProductService-Dev" `
+            C:\Builder\Temp\ProductService\Extracted\* `
+            C:\inetpub\ProductService-Dev `
             -Recurse -Force
 
           Start-WebAppPool ProductPool-Dev
 
-  production:
+  deploy-prod:
 
     if: github.ref_name == 'main'
 
@@ -111,25 +126,30 @@ jobs:
           Import-Module WebAdministration
 
           Remove-Item `
-            "C:\Builder\Temp\ProductService\Extracted" `
+            C:\Builder\Temp\ProductService\Extracted `
             -Recurse -Force `
             -ErrorAction Ignore
 
+          $zip = Get-ChildItem `
+            C:\Builder\Temp\ProductService\*.zip |
+            Sort-Object LastWriteTime -Descending |
+            Select-Object -First 1
+
           Expand-Archive `
-            "C:\Builder\Temp\ProductService\ProductService-*.zip" `
-            "C:\Builder\Temp\ProductService\Extracted" `
+            $zip.FullName `
+            C:\Builder\Temp\ProductService\Extracted `
             -Force
 
           Stop-WebAppPool ProductPool-Prod -ErrorAction Ignore
 
           Remove-Item `
-            "C:\inetpub\ProductService-Prod\*" `
+            C:\inetpub\ProductService-Prod\* `
             -Recurse -Force `
             -ErrorAction Ignore
 
           Copy-Item `
-            "C:\Builder\Temp\ProductService\Extracted\*" `
-            "C:\inetpub\ProductService-Prod" `
+            C:\Builder\Temp\ProductService\Extracted\* `
+            C:\inetpub\ProductService-Prod `
             -Recurse -Force
 
           Start-WebAppPool ProductPool-Prod
