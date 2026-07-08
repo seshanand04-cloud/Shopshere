@@ -1,4 +1,4 @@
-name: Build ProductService
+name: Build & Deploy ProductService
 
 on:
   push:
@@ -9,49 +9,63 @@ on:
 jobs:
 
   build:
-
     runs-on: self-hosted
 
     steps:
 
-      - name: Build on Builder Server
+      - name: Build
         shell: powershell
         run: |
-
           cd C:\Builder\Shopshere
-
-          Write-Host ""
-          Write-Host "===== Pull Latest Source ====="
-          Write-Host ""
 
           git fetch origin
           git checkout ${{ github.ref_name }}
           git reset --hard origin/${{ github.ref_name }}
 
-          if(Test-Path ".\publish")
-          {
-              Remove-Item ".\publish" -Recurse -Force
-          }
-
-          Write-Host ""
-          Write-Host "===== Visual Studio Build Started ====="
-          Write-Host ""
+          Remove-Item publish -Recurse -Force -ErrorAction Ignore
 
           dotnet restore
-
-          dotnet build -c Release
-
           dotnet publish -c Release -o publish
 
-          Write-Host ""
-          Write-Host "===== Build Completed ====="
-
       - name: Upload Artifact
-
         uses: actions/upload-artifact@v4
-
         with:
-
           name: ProductService
-
           path: C:\Builder\Shopshere\publish
+
+  deploy:
+    needs: build
+    runs-on: self-hosted
+
+    steps:
+
+      - name: Set Environment
+        shell: powershell
+        run: |
+          if("${{ github.ref_name }}" -eq "development"){
+            "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
+            "PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
+          }
+          else{
+            "POOL=ProductPool-Prod" >> $env:GITHUB_ENV
+            "PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
+          }
+
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ProductService
+          path: C:\Builder\Artifacts\ProductService
+
+      - name: Deploy
+        shell: powershell
+        run: |
+          Import-Module WebAdministration
+
+          Stop-WebAppPool $env:POOL -ErrorAction Ignore
+
+          Remove-Item "$env:PATH\*" -Recurse -Force -ErrorAction Ignore
+
+          Copy-Item "C:\Builder\Artifacts\ProductService\*" $env:PATH -Recurse -Force
+
+          Start-WebAppPool $env:POOL
