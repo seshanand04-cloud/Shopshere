@@ -1,4 +1,4 @@
-name: Build & Deploy ProductService
+name: ProductService CI/CD
 
 on:
   push:
@@ -8,65 +8,105 @@ on:
 
 jobs:
 
-  build:
+  development:
+
+    if: github.ref_name == 'development'
+
     runs-on: self-hosted
 
     steps:
 
-      - name: Build
+      - name: Pull Latest Code
         shell: powershell
         run: |
           cd C:\Builder\Shopshere
 
           git fetch origin
-          git checkout ${{ github.ref_name }}
-          git reset --hard origin/${{ github.ref_name }}
+          git checkout development
+          git reset --hard origin/development
+
+      - name: Build Application
+        shell: powershell
+        run: |
+          cd C:\Builder\Shopshere
 
           Remove-Item publish -Recurse -Force -ErrorAction Ignore
 
           dotnet restore
+
           dotnet publish -c Release -o publish
+
+      - name: Save Release Artifact
+        shell: powershell
+        run: |
+
+          Remove-Item `
+          "C:\Builder\Release\ProductService" `
+          -Recurse -Force `
+          -ErrorAction Ignore
+
+          New-Item `
+          -ItemType Directory `
+          -Path "C:\Builder\Release\ProductService" `
+          -Force
+
+          Copy-Item `
+          "C:\Builder\Shopshere\publish\*" `
+          "C:\Builder\Release\ProductService" `
+          -Recurse -Force
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ProductService
-          path: C:\Builder\Shopshere\publish
+          path: C:\Builder\Release\ProductService
 
-  deploy:
-    needs: build
+      - name: Deploy Development
+        shell: powershell
+        run: |
+
+          Import-Module WebAdministration
+
+          Stop-WebAppPool ProductPool-Dev -ErrorAction Ignore
+
+          Remove-Item `
+          "C:\inetpub\ProductService-Dev\*" `
+          -Recurse -Force `
+          -ErrorAction Ignore
+
+          Copy-Item `
+          "C:\Builder\Release\ProductService\*" `
+          "C:\inetpub\ProductService-Dev" `
+          -Recurse -Force
+
+          Start-WebAppPool ProductPool-Dev
+
+  production:
+
+    if: github.ref_name == 'main'
+
     runs-on: self-hosted
+
     environment: Production
 
     steps:
 
-      - name: Set Environment
+      - name: Deploy Production
         shell: powershell
         run: |
-          if("${{ github.ref_name }}" -eq "development"){
-            "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
-            "PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
-          }
-          else{
-            "POOL=ProductPool-Prod" >> $env:GITHUB_ENV
-            "PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
-          }
 
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          name: ProductService
-          path: C:\Builder\Artifacts\ProductService
-
-      - name: Deploy
-        shell: powershell
-        run: |
           Import-Module WebAdministration
 
-          Stop-WebAppPool $env:POOL -ErrorAction Ignore
+          Stop-WebAppPool ProductPool-Prod -ErrorAction Ignore
 
-          Remove-Item "$env:PATH\*" -Recurse -Force -ErrorAction Ignore
+          Remove-Item `
+          "C:\inetpub\ProductService-Prod\*" `
+          -Recurse -Force `
+          -ErrorAction Ignore
 
-          Copy-Item "C:\Builder\Artifacts\ProductService\*" $env:PATH -Recurse -Force
+          Copy-Item `
+          "C:\Builder\Release\ProductService\*" `
+          "C:\inetpub\ProductService-Prod" `
+          -Recurse -Force
 
-          Start-WebAppPool $env:POOL
+          Start-WebAppPool ProductPool-Prod
