@@ -38,6 +38,10 @@ jobs:
 
           $version = Get-Date -Format "yyyyMMdd-HHmmss"
 
+          Remove-Item "C:\Builder\Artifacts\ProductService\*" `
+          -Recurse -Force `
+          -ErrorAction Ignore
+
           Compress-Archive `
               -Path publish\* `
               -DestinationPath "C:\Builder\Artifacts\ProductService\ProductService-$version.zip"
@@ -46,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ProductService
-          path: C:\Builder\Artifacts\ProductService
+          path: C:\Builder\Artifacts\ProductService\ProductService-*.zip
 
       - name: Download Artifact
         uses: actions/download-artifact@v4
