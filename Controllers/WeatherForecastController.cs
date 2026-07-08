@@ -25,7 +25,7 @@ namespace ProductService.Controllers
             {
                 Date = DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
                 TemperatureC = Random.Shared.Next(-20, 55),
-                Summary = "Deployed from GitHub Actions"
+                Summary = "Deployed from GitHub Actio"
             })
             .ToArray();
         }

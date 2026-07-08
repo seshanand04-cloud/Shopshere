@@ -7,52 +7,51 @@ on:
       - main
 
 jobs:
+
   build:
+
     runs-on: self-hosted
 
     steps:
 
-      - name: Set Environment
+      - name: Build on Builder Server
         shell: powershell
         run: |
-          if ("${{ github.ref_name }}" -eq "development") {
-            echo "SITE=ProductService-Dev" >> $env:GITHUB_ENV
-            echo "POOL=ProductPool-Dev" >> $env:GITHUB_ENV
-            echo "DEPLOY_PATH=C:\inetpub\ProductService-Dev" >> $env:GITHUB_ENV
-          }
-          else {
-            echo "SITE=ProductService-Prod" >> $env:GITHUB_ENV
-            echo "POOL=ProductPool-Prod" >> $env:GITHUB_ENV
-            echo "DEPLOY_PATH=C:\inetpub\ProductService-Prod" >> $env:GITHUB_ENV
+
+          cd C:\Builder\Shopshere
+
+          Write-Host ""
+          Write-Host "===== Pull Latest Source ====="
+          Write-Host ""
+
+          git fetch origin
+          git checkout ${{ github.ref_name }}
+          git reset --hard origin/${{ github.ref_name }}
+
+          if(Test-Path ".\publish")
+          {
+              Remove-Item ".\publish" -Recurse -Force
           }
 
-      - name: Build Latest Code
-        shell: powershell
-        run: |
-          cd C:\Builder\Shopshere
-          git fetch
-          git checkout ${{ github.ref_name }}
-          git pull
+          Write-Host ""
+          Write-Host "===== Visual Studio Build Started ====="
+          Write-Host ""
 
           dotnet restore
-          dotnet build --configuration Release
+
+          dotnet build -c Release
+
           dotnet publish -c Release -o publish
 
+          Write-Host ""
+          Write-Host "===== Build Completed ====="
+
       - name: Upload Artifact
+
         uses: actions/upload-artifact@v4
+
         with:
+
           name: ProductService
+
           path: C:\Builder\Shopshere\publish
-
-      - name: Deploy
-        shell: powershell
-        run: |
-          Import-Module WebAdministration
-
-          Stop-Website $env:SITE
-          Stop-WebAppPool $env:POOL
-
-          Copy-Item "C:\Builder\Shopshere\publish\*" $env:DEPLOY_PATH -Recurse -Force
-
-          Start-WebAppPool $env:POOL
-          Start-Website $env:SITE
